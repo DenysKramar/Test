@@ -30,32 +30,57 @@ jobs:
           name: release-apk
           path: app/build/outputs/apk/release/app-release.apk
 
-  trigger_gitlab:
-    name: Trigger GitLab Pipeline
+  sonarcloud:
+    name: SonarCloud Scan
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-      - name: Checkout repository (for GitLab sync)
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Git for GitLab sync
-        run: |
-          git config --global user.name "Denys Kramar"
-          git config --global user.email "denys.kramar@onix-systems.com"
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
 
-      - name: Push changes to GitLab
-        run: |
-          git remote set-url origin https://oauth2:${{ glptt-a2d76965ee2147ad4673d042403400769f29ab1c }}@gitlab.com/onix-systems/android-sonar.git
-          git push origin HEAD:WebHookTest  
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
-      - name: Trigger GitLab Pipeline
-        run: |
-          curl -X POST \
-            -H "Authorization: token glptt-a2d76965ee2147ad4673d042403400769f29ab1c" \
-            -d '{"ref": "WebHookTest"}' \
-            "https://gitlab.com/api/v4/projects/1324/trigger/pipeline"
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
         env:
-          GITLAB_TOKEN: ${{ glptt-a2d76965ee2147ad4673d042403400769f29ab1c }}
-          GITLAB_PROJECT_ID: ${{ 1324 }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+#  trigger_gitlab:
+#    name: Trigger GitLab Pipeline
+#    runs-on: ubuntu-latest
+#    needs: sonarcloud
+#
+#    steps:
+#      - name: Checkout repository (for GitLab sync)
+#        uses: actions/checkout@v3
+#
+#      - name: Set up Git for GitLab sync
+#        run: |
+#          git config --global user.name "Denys Kramar"
+#          git config --global user.email "denys.kramar@onix-systems.com"
+#
+#      - name: Push changes to GitLab
+#        run: |
+#          git remote set-url origin https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/onix-systems/android-sonar.git
+#          git push origin HEAD:WebHookTest
+#
+#      - name: Trigger GitLab Pipeline
+#        run: |
+#          curl -X POST \
+#            -H "Authorization: token ${{ secrets.GITLAB_TOKEN }}" \
+#            -d '{"ref": "WebHookTest"}' \
+#            "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_PROJECT_ID }}/trigger/pipeline"
