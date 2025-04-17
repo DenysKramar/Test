@@ -36,8 +36,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
 
-
     steps:
+      - name: Checkout repository (for GitLab sync)
+        uses: actions/checkout@v3
+
+      - name: Set up Git for GitLab sync
+        run: |
+          git config --global user.name "Denys Kramar"
+          git config --global user.email "denys.kramar@onix-systems.com"
+
+      - name: Push changes to GitLab
+        run: |
+          git remote set-url origin https://oauth2:${{ glptt-a2d76965ee2147ad4673d042403400769f29ab1c }}@gitlab.com/onix-systems/android-sonar.git
+          git push origin HEAD:WebHookTest  
+
       - name: Trigger GitLab Pipeline
         run: |
           curl -X POST \
